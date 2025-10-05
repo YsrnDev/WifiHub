@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="src/img/favicon.ico" type="image/x-icon">
+    <title>WifiHub - Solusi Voucher Hotspot</title>
+    <link rel="stylesheet" href="src/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="src/img/logo.png" alt="WifiHub Logo" class="logo-img">
+                <span>WifiHub</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home">Beranda</a></li>
+                <li><a href="#features">Fitur</a></li>
+                <li><a href="#pricing">Harga</a></li>
+                <li><a href="#contact">Kontak</a></li>
+                <li>
+                    <button class="mode-toggle" id="modeToggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </li>
+                <li><a href="#" class="btn-auth" id="authBtn">Sign In</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Auth Modal -->
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <div class="close-btn" id="closeModal">&times;</div>
+            <div class="auth-container">
+                <div class="auth-form" id="authForm">
+                    <div class="form-toggle">
+                        <span class="toggle-btn active" id="loginToggle">Login</span>
+                        <span class="toggle-btn" id="registerToggle">Daftar</span>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <form id="loginForm">
+                        <h2>Selamat Datang Kembali</h2>
+                        <div class="input-group">
+                            <label for="loginEmail">Email</label>
+                            <input type="email" id="loginEmail" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="loginPassword">Kata Sandi</label>
+                            <input type="password" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Login</button>
+                    </form>
+                    
+                    <!-- Register Form -->
+                    <form id="registerForm" style="display: none;">
+                        <h2>Buat Akun Baru</h2>
+                        <div class="input-group">
+                            <label for="registerName">Nama Lengkap</label>
+                            <input type="text" id="registerName" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="registerEmail">Email</label>
+                            <input type="email" id="registerEmail" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="registerPassword">Kata Sandi</label>
+                            <input type="password" id="registerPassword" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="registerConfirmPassword">Konfirmasi Kata Sandi</label>
+                            <input type="password" id="registerConfirmPassword" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Daftar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal" id="checkoutModal">
+        <div class="modal-content">
+            <div class="close-btn" id="closeCheckoutModal">&times;</div>
+            <div class="checkout-container">
+                <h2>Checkout Paket</h2>
+                <div class="selected-package">
+                    <h3 id="selectedPackageName">Paket Premium</h3>
+                    <div class="price" id="selectedPackagePrice">Rp 20.000</div>
+                    <ul id="selectedPackageFeatures">
+                        <li><i class="fas fa-check"></i> Unlimited Data</li>
+                        <li><i class="fas fa-check"></i> Durasi 1 Hari</li>
+                        <li><i class="fas fa-check"></i> Berlaku 2 Hari</li>
+                        <li><i class="fas fa-check"></i> High Speed</li>
+                        <li><i class="fas fa-check"></i> Prioritas Tinggi</li>
+                        <li><i class="fas fa-check"></i> Dukungan 24/7</li>
+                    </ul>
+                </div>
+                <form id="checkoutForm">
+                    <div class="input-group">
+                        <label for="customerName">Nama Lengkap</label>
+                        <input type="text" id="customerName" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="customerEmail">Email</label>
+                        <input type="email" id="customerEmail" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="customerPhone">Nomor Telepon</label>
+                        <input type="tel" id="customerPhone" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="paymentMethod">Metode Pembayaran</label>
+                        <select id="paymentMethod" required>
+                            <option value="">Pilih Metode Pembayaran</option>
+                            <option value="dana">DANA</option>
+                            <option value="gopay">GoPay</option>
+                            <option value="ovo">OVO</option>
+                            <option value="linkaja">LinkAja</option>
+                            <option value="qris">QRIS</option>
+                            <option value="bank">Transfer Bank</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="paymentAccountGroup">
+                        <label for="paymentAccount">Nomor Akun Pembayaran</label>
+                        <input type="text" id="paymentAccount" placeholder="Masukkan nomor akun sesuai metode pembayaran">
+                        <small class="payment-account-help">Wajib diisi untuk transfer bank</small>
+                    </div>
+                    <button type="submit" class="btn-primary">Bayar Sekarang</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">WifiHub<span class="hero-subtitle"> Voucher Hotspot Mikrotik Terbaik</span></h1>
+                <p class="hero-description">
+                    Dapatkan koneksi internet cepat dan stabil dengan layanan WifiHub kami. 
+                    Solusi internet murah untuk semua kebutuhan Anda.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn-primary">Dapatkan Voucher</button>
+                    <button class="btn-secondary">Pelajari Lebih</button>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="hero-animation">
+                    <div class="floating-circle circle-1"></div>
+                    <div class="floating-circle circle-2"></div>
+                    <div class="floating-circle circle-3"></div>
+                    <div class="wifi-card">
+                        <i class="fas fa-wifi"></i>
+                        <h3>Wifi Premium</h3>
+                        <p>High Speed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Fitur Unggulan</h2>
+                <p>Solusi komplit untuk kebutuhan internet Anda</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Kecepatan Tinggi</h3>
+                    <p>Koneksi stabil dengan kecepatan maksimal untuk semua aktivitas online</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Keamanan Terjamin</h3>
+                    <p>Proteksi data dan koneksi aman untuk kenyamanan Anda</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>24/7 Support</h3>
+                    <p>Layanan pelanggan yang siap membantu Anda kapan saja</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2>Paket WifiHub</h2>
+                <p>Pilihan paket sesuai kebutuhan internet Anda</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Basic</h3>
+                    <div class="price">Rp 5.000</div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Unlimited Data</li>
+                        <li><i class="fas fa-check"></i> Durasi 6 Jam</li>
+                        <li><i class="fas fa-check"></i> Berlaku 1 Hari</li>
+                        <li><i class="fas fa-check"></i> High Speed</li>
+                        <li><i class="fas fa-check"></i> Prioritas Tinggi</li>
+                        <li><i class="fas fa-check"></i> Dukungan 24/7</li>
+                    </ul>
+                    <button class="btn-primary" data-package="basic">Pilih Paket</button>
+                </div>
+                <div class="pricing-card">
+                    <h3>Plus</h3>
+                    <div class="price">Rp 10.000</div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Unlimited Data</li>
+                        <li><i class="fas fa-check"></i> Durasi 12 Jam</li>
+                        <li><i class="fas fa-check"></i> Berlaku 1 Hari</li>
+                        <li><i class="fas fa-check"></i> High Speed</li>
+                        <li><i class="fas fa-check"></i> Prioritas Tinggi</li>
+                        <li><i class="fas fa-check"></i> Dukungan 24/7</li>
+                    </ul>
+                    <button class="btn-primary" data-package="plus">Pilih Paket</button>
+                </div>
+                <div class="pricing-card popular">
+                    <div class="popular-tag">Paling Populer</div>
+                    <h3>Premium</h3>
+                    <div class="price">Rp 20.000</div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Unlimited Data</li>
+                        <li><i class="fas fa-check"></i> Durasi 1 Hari</li>
+                        <li><i class="fas fa-check"></i> Berlaku 2 Hari</li>
+                        <li><i class="fas fa-check"></i> High Speed</li>
+                        <li><i class="fas fa-check"></i> Prioritas Tinggi</li>
+                        <li><i class="fas fa-check"></i> Dukungan 24/7</li>
+                    </ul>
+                    <button class="btn-primary" data-package="premium">Pilih Paket</button>
+                </div>
+                <div class="pricing-card">
+                    <h3>Ultimate</h3>
+                    <div class="price">Rp 30.000</div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Unlimited Data</li>
+                        <li><i class="fas fa-check"></i> Durasi 2 Hari</li>
+                        <li><i class="fas fa-check"></i> Berlaku 3 Hari</li>
+                        <li><i class="fas fa-check"></i> High Speed</li>
+                        <li><i class="fas fa-check"></i> Prioritas Tinggi</li>
+                        <li><i class="fas fa-check"></i> Dukungan 24/7</li>
+                    </ul>
+                    <button class="btn-primary" data-package="ultimate">Pilih Paket</button>
+                </div>
+                <div class="pricing-card">
+                    <h3>Elite</h3>
+                    <div class="price">Rp 40.000</div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Unlimited Data</li>
+                        <li><i class="fas fa-check"></i> Durasi 4 Hari</li>
+                        <li><i class="fas fa-check"></i> Berlaku 5 Hari</li>
+                        <li><i class="fas fa-check"></i> High Speed</li>
+                        <li><i class="fas fa-check"></i> Prioritas Tinggi</li>
+                        <li><i class="fas fa-check"></i> Dukungan 24/7</li>
+                    </ul>
+                    <button class="btn-primary" data-package="elite">Pilih Paket</button>
+                </div>
+                <div class="pricing-card">
+                    <h3>Pro</h3>
+                    <div class="price">Rp 50.000</div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Unlimited Data</li>
+                        <li><i class="fas fa-check"></i> Durasi 6 Hari</li>
+                        <li><i class="fas fa-check"></i> Berlaku 7 Hari</li>
+                        <li><i class="fas fa-check"></i> High Speed</li>
+                        <li><i class="fas fa-check"></i> Prioritas Tinggi</li>
+                        <li><i class="fas fa-check"></i> Dukungan 24/7</li>
+                    </ul>
+                    <button class="btn-primary" data-package="pro">Pilih Paket</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2>Hubungi Kami</h2>
+                <p>Siap membantu Anda kapan saja</p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h3>Email</h3>
+                            <p>info@wifihub.com</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h3>Telepon</h3>
+                            <p>+62 812-3456-7890</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <h3>Lokasi</h3>
+                            <p>Jakarta, Indonesia</p>
+                        </div>
+                    </div>
+                </div>
+                <form class="contact-form">
+                    <div class="input-group">
+                        <label for="name">Nama Lengkap</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="message">Pesan</label>
+                        <textarea id="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Kirim Pesan</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>WifiHub</h3>
+                    <p>Solusi internet terbaik untuk kebutuhan Anda. Koneksi cepat, stabil, dan terjangkau.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Tautan</h4>
+                    <ul>
+                        <li><a href="#home">Beranda</a></li>
+                        <li><a href="#features">Fitur</a></li>
+                        <li><a href="#pricing">Harga</a></li>
+                        <li><a href="#contact">Kontak</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Ikuti Kami</h4>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 WifiHub. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Konfirmasi</h3>
+            </div>
+            <div class="modal-body">
+                <p id="confirmationMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelBtn">Batal</button>
+                <button class="btn-primary" id="confirmBtn">Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal" id="successModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Sukses</h3>
+            </div>
+            <div class="modal-body">
+                <div class="success-content">
+                    <i class="fas fa-check-circle success-icon"></i>
+                    <p id="successMessage"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="okSuccessBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div class="modal" id="errorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Error</h3>
+            </div>
+            <div class="modal-body">
+                <div class="error-content">
+                    <i class="fas fa-exclamation-circle error-icon"></i>
+                    <p id="errorMessage"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="okErrorBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Midtrans Snap Payment Gateway Placeholder -->
+    <script id="midtrans-snap-script" src=""></script>
+    
+    <script src="src/js/script.js"></script>
+</body>
+</html>
