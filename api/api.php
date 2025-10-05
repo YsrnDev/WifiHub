@@ -9,20 +9,23 @@ header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, Accept, Origin');
 header('Access-Control-Max-Age: 3600');
 
+// Load environment variables
+require_once('../src/php/env_loader.php');
+
 // Load Midtrans configuration
 require_once('midtrans_config.php');
 
 // Database configuration for XAMPP MySQL
-$db_host = 'localhost';
-$db_name = 'wifihub'; // Make sure you create this database in phpMyAdmin
-$db_user = 'root';     // Default XAMPP MySQL user
-$db_pass = '';         // Default XAMPP MySQL password (empty)
+$db_host = $_ENV['DB_HOST'] ?? 'localhost';
+$db_name = $_ENV['DB_NAME'] ?? 'wifihub'; // Make sure you create this database in phpMyAdmin
+$db_user = $_ENV['DB_USER'] ?? 'root';     // Default XAMPP MySQL user
+$db_pass = $_ENV['DB_PASS'] ?? '';         // Default XAMPP MySQL password (empty)
 
 // Mikrotik configuration (if needed)
-$mikrotik_host = '192.168.100.1'; // Change to your Mikrotik IP
-$mikrotik_user = 'yusronAPI';
-$mikrotik_pass = 'yusronAPI';
-$mikrotik_port = 8778; // or 8729 for SSL
+$mikrotik_host = $_ENV['MIKROTIK_HOST'] ?? '192.168.100.1'; // Change to your Mikrotik IP
+$mikrotik_user = $_ENV['MIKROTIK_USER'] ?? 'yusronAPI';
+$mikrotik_pass = $_ENV['MIKROTIK_PASS'] ?? 'yusronAPI';
+$mikrotik_port = (int)($_ENV['MIKROTIK_PORT'] ?? 8778); // or 8729 for SSL
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);

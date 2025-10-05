@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment variables
+.env
+.env.local
+.env.backup
+
+# Logs
+logs/
+*.log
+error_log
+*.error_log
+
+# Database
+*.sql
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup & Temp
+*.bak
+*.tmp
+*~
+*.orig
+
+# Composer
+composer.lock
+composer.phar
+
+# Build
+dist/
+build/
+*.min.js
+*.min.css
