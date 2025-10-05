@@ -2,14 +2,10 @@
 // Midtrans configuration for direct API calls
 // Using cURL instead of the official PHP library to avoid dependency issues
 
-// Load environment variables (should already be loaded in api.php)
-$midtrans_server_key = $_ENV['MIDTRANS_SERVER_KEY'] ?? 'SB-Mid-server-PviukVucPNpkka-jrKTmbQVQ';
-$midtrans_client_key = $_ENV['MIDTRANS_CLIENT_KEY'] ?? 'SB-Mid-client-FpD_86gt6FQj5vik';
-$midtrans_is_production = ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true';
-
-define('MIDTRANS_SERVER_KEY', $midtrans_server_key);
-define('MIDTRANS_CLIENT_KEY', $midtrans_client_key);
-define('MIDTRANS_IS_PRODUCTION', $midtrans_is_production);
+// Load configuration from environment
+define('MIDTRANS_SERVER_KEY', $_ENV['MIDTRANS_SERVER_KEY'] ?? '');
+define('MIDTRANS_CLIENT_KEY', $_ENV['MIDTRANS_CLIENT_KEY'] ?? '');
+define('MIDTRANS_IS_PRODUCTION', ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true');
 
 // Determine environment
 if (MIDTRANS_IS_PRODUCTION) {

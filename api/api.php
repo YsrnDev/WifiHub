@@ -15,17 +15,7 @@ require_once('../src/php/env_loader.php');
 // Load Midtrans configuration
 require_once('midtrans_config.php');
 
-// Database configuration for XAMPP MySQL
-$db_host = $_ENV['DB_HOST'] ?? 'localhost';
-$db_name = $_ENV['DB_NAME'] ?? 'wifihub'; // Make sure you create this database in phpMyAdmin
-$db_user = $_ENV['DB_USER'] ?? 'root';     // Default XAMPP MySQL user
-$db_pass = $_ENV['DB_PASS'] ?? '';         // Default XAMPP MySQL password (empty)
-
-// Mikrotik configuration (if needed)
-$mikrotik_host = $_ENV['MIKROTIK_HOST'] ?? '192.168.100.1'; // Change to your Mikrotik IP
-$mikrotik_user = $_ENV['MIKROTIK_USER'] ?? 'yusronAPI';
-$mikrotik_pass = $_ENV['MIKROTIK_PASS'] ?? 'yusronAPI';
-$mikrotik_port = (int)($_ENV['MIKROTIK_PORT'] ?? 8778); // or 8729 for SSL
+// Configuration is loaded via env_loader.php
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -96,7 +86,10 @@ function getPaymentConfig($data) {
 
 // Function to connect to MySQL
 function connectDB() {
-    global $db_host, $db_name, $db_user, $db_pass;
+    $db_host = $_ENV['DB_HOST'];
+    $db_name = $_ENV['DB_NAME'];
+    $db_user = $_ENV['DB_USER'];
+    $db_pass = $_ENV['DB_PASS'];
     
     try {
         $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
