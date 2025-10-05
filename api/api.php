@@ -9,13 +9,25 @@ header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, Accept, Origin');
 header('Access-Control-Max-Age: 3600');
 
-// Load environment variables
+// Load environment variables FIRST
 require_once('../src/php/env_loader.php');
 
-// Load Midtrans configuration
+// Log environment loading for debugging
+error_log("Environment variables loaded - DB_HOST: " . ($_ENV['DB_HOST'] ?? 'NOT SET'));
+error_log("Environment variables loaded - MIDTRANS_SERVER_KEY: " . (isset($_ENV['MIDTRANS_SERVER_KEY']) ? 'SET' : 'NOT SET'));
+error_log("Environment variables loaded - MIDTRANS_CLIENT_KEY: " . (isset($_ENV['MIDTRANS_CLIENT_KEY']) ? 'SET' : 'NOT SET'));
+
+// Now load Midtrans configuration (which can access the environment variables)
 require_once('midtrans_config.php');
 
 // Configuration is loaded via env_loader.php
+
+// Utility function to get config value with default
+function getConfig($key, $default = null) {
+    $value = $_ENV[$key] ?? $default;
+    error_log("getConfig called for key: $key, value: " . ($value ? 'SET' : 'NOT SET/FALLBACK'));
+    return $value;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -73,9 +85,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 function getPaymentConfig($data) {
     // Return only the client key, keep server key secure on server side
+    $clientKey = $_ENV['MIDTRANS_CLIENT_KEY'] ?? '';
+    $isProduction = ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true';
+    
+    error_log("Getting payment config - Client Key: " . ($clientKey ? 'SET' : 'NOT SET') . ", Production: " . ($isProduction ? 'true' : 'false'));
+    
+    if (empty($clientKey)) {
+        error_log("WARNING: Midtrans client key not found in environment variables");
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Payment configuration not available'
+        ]);
+        return;
+    }
+    
     $config = [
-        'client_key' => defined('MIDTRANS_CLIENT_KEY') ? MIDTRANS_CLIENT_KEY : '',
-        'is_production' => defined('MIDTRANS_IS_PRODUCTION') ? MIDTRANS_IS_PRODUCTION : false
+        'client_key' => $clientKey,
+        'is_production' => $isProduction
     ];
     
     echo json_encode([
@@ -86,10 +112,10 @@ function getPaymentConfig($data) {
 
 // Function to connect to MySQL
 function connectDB() {
-    $db_host = $_ENV['DB_HOST'];
-    $db_name = $_ENV['DB_NAME'];
-    $db_user = $_ENV['DB_USER'];
-    $db_pass = $_ENV['DB_PASS'];
+    $db_host = $_ENV['DB_HOST'] ?? 'localhost';
+    $db_name = $_ENV['DB_NAME'] ?? 'wifihub';
+    $db_user = $_ENV['DB_USER'] ?? 'root';
+    $db_pass = $_ENV['DB_PASS'] ?? '';
     
     try {
         $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
@@ -117,7 +143,7 @@ function handleLogin($data) {
     }
     
     try {
-        $stmt = $pdo->prepare("SELECT user_id, name, email, password_hash FROM users WHERE email = :email");
+        $stmt = $pdo->prepare("SELECT user_id, name, email, phone, password_hash FROM users WHERE email = :email");
         $stmt->execute([':email' => $email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -128,7 +154,8 @@ function handleLogin($data) {
                 'user' => [
                     'user_id' => $user['user_id'],
                     'name' => $user['name'],
-                    'email' => $user['email']
+                    'email' => $user['email'],
+                    'phone' => $user['phone']
                 ]
             ]);
         } else {
@@ -150,6 +177,7 @@ function handleRegister($data) {
     $name = $data['name'] ?? '';
     $email = $data['email'] ?? '';
     $password = $data['password'] ?? '';
+    $phone = $data['phone'] ?? '';
     
     if (empty($name) || empty($email) || empty($password)) {
         echo json_encode(['status' => 'error', 'message' => 'Semua field wajib diisi']);
@@ -175,13 +203,14 @@ function handleRegister($data) {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         
         $stmt = $pdo->prepare("
-            INSERT INTO users (name, email, password_hash) 
-            VALUES (:name, :email, :password_hash)
+            INSERT INTO users (name, email, phone, password_hash) 
+            VALUES (:name, :email, :phone, :password_hash)
         ");
         
         $stmt->execute([
             ':name' => $name,
             ':email' => $email,
+            ':phone' => $phone,
             ':password_hash' => $hashedPassword
         ]);
         
@@ -338,15 +367,26 @@ function handleCheckout($data) {
             }
         }
         
-        // If Midtrans fails or we're in test mode, use mock
-        if (!$snapToken || $isTestMode) {
+        // Try to create Midtrans transaction
+        $snapToken = null;
+        $isTestMode = false;
+        
+        try {
+            $snapToken = createMidtransTransaction($orderData);
+            error_log("Midtrans attempt for order $orderId, result: " . ($snapToken ? 'success' : 'failed'));
+        } catch (Exception $e) {
+            error_log("Midtrans integration error for order $orderId: " . $e->getMessage());
+        }
+        
+        // If Midtrans fails, use mock for development
+        if (!$snapToken) {
             $snapToken = 'test-token-' . $orderId;
             $isTestMode = true;
             error_log("Using test token for order $orderId. Midtrans may have failed.");
         }
         
         if ($snapToken) {
-            // Update order with Midtrans transaction data
+            // Update order with transaction data
             $pdo = connectDB(); // Reconnect after commit
             $stmt = $pdo->prepare("UPDATE orders SET payment_token = :payment_token WHERE order_id = :order_id");
             $stmt->execute([
@@ -532,9 +572,15 @@ function updateProfile($data) {
         }
         
         if ($stmt->rowCount() > 0) {
+            // Get updated user data to return
+            $stmt = $pdo->prepare("SELECT user_id, name, email, phone FROM users WHERE user_id = :user_id");
+            $stmt->execute([':user_id' => $userId]);
+            $updatedUser = $stmt->fetch(PDO::FETCH_ASSOC);
+            
             echo json_encode([
                 'status' => 'success', 
-                'message' => 'Profile berhasil diperbarui'
+                'message' => 'Profile berhasil diperbarui',
+                'user' => $updatedUser
             ]);
         } else {
             echo json_encode([

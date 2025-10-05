@@ -2,21 +2,45 @@
 // Midtrans configuration for direct API calls
 // Using cURL instead of the official PHP library to avoid dependency issues
 
-// Load configuration from environment
-define('MIDTRANS_SERVER_KEY', $_ENV['MIDTRANS_SERVER_KEY'] ?? '');
-define('MIDTRANS_CLIENT_KEY', $_ENV['MIDTRANS_CLIENT_KEY'] ?? '');
-define('MIDTRANS_IS_PRODUCTION', ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true');
+// Configuration is loaded via environment variables
+// Using functions to access values instead of constants for better safety
 
 // Determine environment
-if (MIDTRANS_IS_PRODUCTION) {
+if (($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true') {
     define('MIDTRANS_BASE_URL', 'https://api.midtrans.com');
 } else {
     define('MIDTRANS_BASE_URL', 'https://api.sandbox.midtrans.com');
 }
 
+// Function to get Midtrans configuration
+function getMidtransConfig($key) {
+    switch ($key) {
+        case 'server_key':
+            return $_ENV['MIDTRANS_SERVER_KEY'] ?? '';
+        case 'client_key':
+            return $_ENV['MIDTRANS_CLIENT_KEY'] ?? '';
+        case 'is_production':
+            return ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true';
+        case 'base_url':
+            return ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true' ? 
+                   'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
+        default:
+            return null;
+    }
+}
+
 // Function to create Midtrans transaction using cURL
 function createMidtransTransaction($orderData) {
-    $serverKey = defined('MIDTRANS_SERVER_KEY') ? MIDTRANS_SERVER_KEY : $_ENV['MIDTRANS_SERVER_KEY'];
+    $serverKey = getMidtransConfig('server_key');
+    
+    if (!$serverKey) {
+        error_log("Midtrans server key not configured");
+        return null;
+    }
+    
+    error_log("Attempting to create Midtrans transaction for order: " . $orderData['order_id']);
+    error_log("Server key length: " . strlen($serverKey));
+    error_log("Base URL: " . getMidtransConfig('base_url'));
     
     $params = array(
         'transaction_details' => array(
@@ -40,8 +64,13 @@ function createMidtransTransaction($orderData) {
     
     $curl = curl_init();
     
+    $baseUrl = getMidtransConfig('base_url');
+    $url = $baseUrl . "/snap/v1/transactions";
+    
+    error_log("Making request to: $url");
+    
     curl_setopt_array($curl, array(
-        CURLOPT_URL => MIDTRANS_BASE_URL . "/v2/charge",
+        CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => "",
         CURLOPT_MAXREDIRS => 10,
@@ -67,6 +96,8 @@ function createMidtransTransaction($orderData) {
         return null;
     }
     
+    error_log("Midtrans API Response Code: $httpCode, Response: $response");
+    
     if ($httpCode !== 200 && $httpCode !== 201) {
         error_log("Midtrans API Error: HTTP Code $httpCode, Response: $response");
         return null;
@@ -75,8 +106,10 @@ function createMidtransTransaction($orderData) {
     $result = json_decode($response, true);
     
     if (isset($result['token'])) {
+        error_log("Midtrans transaction created successfully for order " . $orderData['order_id']);
         return $result['token'];
     } elseif (isset($result['redirect_url'])) {
+        error_log("Midtrans transaction created with redirect URL for order " . $orderData['order_id']);
         return $result; // Return full result for redirect
     }
     
