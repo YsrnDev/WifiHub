@@ -17,6 +17,12 @@ error_log("Environment variables loaded - DB_HOST: " . ($_ENV['DB_HOST'] ?? 'NOT
 error_log("Environment variables loaded - MIDTRANS_SERVER_KEY: " . (isset($_ENV['MIDTRANS_SERVER_KEY']) ? 'SET' : 'NOT SET'));
 error_log("Environment variables loaded - MIDTRANS_CLIENT_KEY: " . (isset($_ENV['MIDTRANS_CLIENT_KEY']) ? 'SET' : 'NOT SET'));
 
+// Verify environment variables are loaded
+if (!isset($_ENV['MIDTRANS_SERVER_KEY']) || !isset($_ENV['MIDTRANS_CLIENT_KEY'])) {
+    error_log("CRITICAL ERROR: Midtrans credentials not found in environment variables!");
+    error_log("Current ENV keys: " . implode(', ', array_keys($_ENV)));
+}
+
 // Now load Midtrans configuration (which can access the environment variables)
 require_once('midtrans_config.php');
 
@@ -353,7 +359,7 @@ function handleCheckout($data) {
         
         // For testing, return a mock response
         $snapToken = null;
-        $isTestMode = false; // Set to false when ready to use real Midtrans
+        $isTestMode = false; // Set to false to use real Midtrans
         
         // Try to create Midtrans transaction
         if (!$isTestMode) {
@@ -367,22 +373,58 @@ function handleCheckout($data) {
             }
         }
         
-        // Try to create Midtrans transaction
-        $snapToken = null;
-        $isTestMode = false;
-        
-        try {
-            $snapToken = createMidtransTransaction($orderData);
-            error_log("Midtrans attempt for order $orderId, result: " . ($snapToken ? 'success' : 'failed'));
-        } catch (Exception $e) {
-            error_log("Midtrans integration error for order $orderId: " . $e->getMessage());
-        }
-        
-        // If Midtrans fails, use mock for development
-        if (!$snapToken) {
-            $snapToken = 'test-token-' . $orderId;
-            $isTestMode = true;
-            error_log("Using test token for order $orderId. Midtrans may have failed.");
+        // Prevent duplicate processing for the same order
+        static $processedOrders = [];
+        if (isset($processedOrders[$orderId])) {
+            error_log("Order $orderId already processed, using cached result");
+            $snapToken = $processedOrders[$orderId]['token'];
+            $isTestMode = $processedOrders[$orderId]['isTestMode'];
+        } else {
+            $snapToken = null;
+            $isTestMode = false;
+            
+            try {
+                error_log("Creating Midtrans transaction for order $orderId");
+                $snapToken = createMidtransTransaction($orderData);
+                error_log("Midtrans attempt for order $orderId, result type: " . gettype($snapToken));
+                
+                // Handle different response types
+                if (is_string($snapToken) && !empty($snapToken)) {
+                    error_log("Successfully got Snap token for order $orderId: " . substr($snapToken, 0, 20) . "...");
+                    // Cache the result to prevent duplicate processing
+                    $processedOrders[$orderId] = $snapToken;
+                } elseif (is_array($snapToken)) {
+                    error_log("Unexpected: Midtrans returned array response for order $orderId: " . json_encode($snapToken));
+                    // Handle redirect URLs properly
+                    if (isset($snapToken['redirect_url'])) {
+                        error_log("Midtrans returned redirect URL instead of token for order $orderId");
+                        // For Snap API, we should always get a token, not redirect_url
+                        // But if we get redirect_url, log it and trigger test mode
+                        $snapToken = null;
+                    } elseif (isset($snapToken['token'])) {
+                        $snapToken = $snapToken['token'];
+                        error_log("Extracted token from array for order $orderId: " . substr($snapToken, 0, 20) . "...");
+                        // Cache the result to prevent duplicate processing
+                        $processedOrders[$orderId] = $snapToken;
+                    } else {
+                        error_log("Array response missing token for order $orderId");
+                        $snapToken = null;
+                    }
+                } else {
+                    error_log("Failed to get valid Snap response for order $orderId");
+                }
+            } catch (Exception $e) {
+                error_log("Midtrans integration error for order $orderId: " . $e->getMessage());
+            }
+            
+            // If Midtrans fails or returns redirect_url, use mock for development
+            if (!$snapToken) {
+                $snapToken = 'test-token-' . $orderId;
+                $isTestMode = true;
+                error_log("Using test token for order $orderId. Midtrans may have failed or returned redirect URL.");
+                // Cache the result to prevent duplicate processing
+                $processedOrders[$orderId] = $snapToken;
+            }
         }
         
         if ($snapToken) {
@@ -395,7 +437,7 @@ function handleCheckout($data) {
             ]);
             
             $message = $isTestMode ? 
-                'Checkout berhasil! (Test Mode - Silakan hubungi admin untuk status pembayaran sebenarnya)' : 
+                'Checkout berhasil! (Development Mode - Silakan hubungi admin untuk status pembayaran sebenarnya)' : 
                 'Checkout berhasil! Silakan selesaikan pembayaran.';
             
             echo json_encode([

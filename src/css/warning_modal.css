@@ -1,0 +1,28 @@
+/* Warning Modal */
+.warning-modal {
+    text-align: center;
+    padding: 2rem;
+}
+
+.warning-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.warning-icon {
+    font-size: 3rem;
+    color: #f59e0b; /* amber-500 */
+}
+
+.warning-modal h3 {
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.warning-modal p {
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.6;
+}

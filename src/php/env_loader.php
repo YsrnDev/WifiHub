@@ -31,4 +31,4 @@ function loadEnv($path) {
 }
 
 // Load the environment file
-loadEnv(__DIR__ . '/.env');
+loadEnv(__DIR__ . '/../../.env');

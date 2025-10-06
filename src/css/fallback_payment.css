@@ -1,0 +1,46 @@
+/* Info Icon */
+.info-icon {
+    font-size: 3rem;
+    color: #3b82f6; /* blue-500 */
+}
+
+/* Fallback Payment */
+.fallback-payment {
+    text-align: center;
+    padding: 2rem;
+}
+
+.fallback-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.fallback-payment h3 {
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.fallback-payment p {
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.payment-actions {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.small-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}

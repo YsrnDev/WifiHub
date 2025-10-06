@@ -638,8 +638,10 @@ function showEditProfileModal() {
                     document.body.removeChild(editProfileModal);
                 }
                 
-                // Show success message
-                showSuccess('Profile berhasil diperbarui!');
+                // Show success message after a small delay to ensure modal is closed
+                setTimeout(() => {
+                    showSuccess('Profile berhasil diperbarui!');
+                }, 300);
             } else {
                 showError(data.message || 'Gagal memperbarui profile.');
             }
@@ -978,37 +980,341 @@ async function loadMidtrans() {
         });
         
         const data = await response.json();
+        console.log('Payment config response:', data);
         
         if (data.status === 'success' && data.data.client_key) {
             const clientKey = data.data.client_key;
             const isProduction = data.data.is_production;
+            
+            console.log('Loading Midtrans with client key:', clientKey.substring(0, 10) + '...');
+            console.log('Environment:', isProduction ? 'Production' : 'Sandbox');
             
             // Create the script element with the client key
             const script = document.createElement('script');
             script.src = `https://app${isProduction ? '' : '.sandbox'}.midtrans.com/snap/snap.js`;
             script.setAttribute('data-client-key', clientKey);
             
+            // Add error handling for script loading
+            script.onerror = function(error) {
+                console.error('Failed to load Midtrans Snap script', error);
+                window.MIDTRANS_LOAD_ERROR = true;
+                // Don't show CSP warning immediately, let the payment flow handle it
+                console.warn('Midtrans Snap script failed to load');
+            };
+            
+            script.onload = function() {
+                console.log('Midtrans Snap script loaded successfully');
+                window.MIDTRANS_LOADED = true;
+                
+                // Check if Snap is available after a delay
+                setTimeout(() => {
+                    if (window.snap) {
+                        console.log('Midtrans Snap is available');
+                        window.MIDTRANS_READY = true;
+                    } else {
+                        console.warn('Midtrans Snap loaded but not available');
+                        window.MIDTRANS_CSP_ERROR = true;
+                        // Don't show CSP warning immediately, let the payment flow handle it
+                    }
+                }, 1500); // Give Snap more time to initialize
+            };
+            
+            // Listen for CSP errors specifically
+            script.addEventListener('error', function(e) {
+                console.error('Script loading error:', e);
+                if ((e.error && e.error.message && e.error.message.includes('Content Security Policy')) || 
+                    (e.message && e.message.includes('Content Security Policy'))) {
+                    console.error('CSP Error detected when loading Midtrans');
+                    window.MIDTRANS_CSP_ERROR = true;
+                    showCSPWarning();
+                }
+            });
+            
             // Append to document head
             document.head.appendChild(script);
             
             // Store the client key globally for later use
             window.MIDTRANS_CLIENT_KEY = clientKey;
+            window.MIDTRANS_IS_PRODUCTION = isProduction;
             
             console.log('Midtrans loaded successfully with client key:', clientKey.substring(0, 10) + '...');
         } else {
             console.error('Failed to get payment configuration:', data.message || 'Unknown error');
-            // Use fallback for development
-            window.MIDTRANS_FALLBACK = true;
+            window.MIDTRANS_LOAD_ERROR = true;
+            showCSPWarning();
         }
     } catch (error) {
         console.error('Error loading Midtrans:', error);
-        // Use fallback for development
-        window.MIDTRANS_FALLBACK = true;
+        window.MIDTRANS_LOAD_ERROR = true;
+        showCSPWarning();
     }
 }
 
-// Load Midtrans when page loads
-document.addEventListener('DOMContentLoaded', loadMidtrans);
+// Function to show CSP warning to user
+function showCSPWarning() {
+    console.warn('Midtrans payment popup may not work due to Content Security Policy restrictions.');
+    console.info('This is a common issue in development environments.');
+    console.info('Solutions:');
+    console.info('1. Disable ad blockers/extensions that block eval()');
+    console.info('2. Try in incognito/private browsing mode');
+    console.info('3. Use a different browser');
+    console.info('4. The CSP meta tag has been added to index.html for development');
+    
+    // Show a warning message to the user
+    showWarning('Pembayaran mungkin tidak bekerja karena pembatasan keamanan browser. Coba nonaktifkan adblocker atau gunakan mode incognito.');
+}
+
+// Function to check if Midtrans is loaded and ready
+function isMidtransReady() {
+    // Check if snap is loaded and has the show function
+    if (window.snap && typeof window.snap.show === 'function') {
+        return true;
+    }
+    
+    // Additional check to see if snap is partially loaded
+    if (window.snap) {
+        console.log('Snap object exists but show function may not be ready yet');
+        // Sometimes snap takes a moment to attach all methods
+        // If snap exists, we'll try anyway
+        return true;
+    }
+    
+    return false;
+}
+
+// Function to wait for Midtrans to be ready
+function waitForMidtrans(timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        
+        const check = () => {
+            if (isMidtransReady()) {
+                console.log('Midtrans is ready');
+                resolve(true);
+            } else if (Date.now() - startTime > timeout) {
+                // Even if not fully ready, if snap exists, try anyway
+                if (window.snap) {
+                    console.log('Snap exists but not fully ready, continuing anyway');
+                    resolve(true);
+                } else {
+                    console.log('Midtrans not loaded at all after timeout');
+                    reject(new Error('Midtrans not ready after timeout'));
+                }
+            } else if (window.MIDTRANS_LOAD_ERROR) {
+                console.log('Midtrans load error detected');
+                reject(new Error('Midtrans failed to load'));
+            } else {
+                setTimeout(check, 200); // Check every 200ms instead of 100ms
+            }
+        };
+        
+        // Start checking
+        check();
+    });
+}
+
+// Function to show warning message to user
+function showWarning(message) {
+    // Create warning modal
+    const warningModal = document.createElement('div');
+    warningModal.className = 'modal active';
+    warningModal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="close-btn" id="closeWarningModal">&times;</div>
+            <div class="warning-modal">
+                <div class="warning-content">
+                    <i class="fas fa-exclamation-triangle warning-icon"></i>
+                    <h3>Peringatan</h3>
+                    <p>${message}</p>
+                    <button class="btn-primary" id="okWarningBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(warningModal);
+    
+    // Add close event listener
+    document.getElementById('closeWarningModal').addEventListener('click', () => {
+        document.body.removeChild(warningModal);
+    });
+    
+    document.getElementById('okWarningBtn').addEventListener('click', () => {
+        document.body.removeChild(warningModal);
+    });
+    
+    warningModal.addEventListener('click', (e) => {
+        if (e.target === warningModal) {
+            document.body.removeChild(warningModal);
+        }
+    });
+}
+
+// Function to show payment popup with fallback
+function showPaymentPopup(snap_token) {
+    console.log('Attempting to show payment popup with token:', snap_token);
+    
+    // Validate token first
+    if (!snap_token || typeof snap_token !== 'string' || snap_token.length < 10) {
+        console.error('Invalid Snap token:', snap_token);
+        showError('Token pembayaran tidak valid. Silakan coba lagi.');
+        return;
+    }
+    
+    // Validate that token is not a redirect URL
+    if (snap_token.startsWith('http')) {
+        console.error('Invalid Snap token - received redirect URL instead:', snap_token);
+        showError('Token pembayaran tidak valid (diterima redirect URL). Silakan coba lagi.');
+        return;
+    }
+    
+    // First, try to use the existing snap.show method
+    if (window.snap && typeof window.snap.show === 'function') {
+        try {
+            console.log('Using window.snap.show with token:', snap_token);
+            snap.show({
+                token: snap_token,
+                onSuccess: function(result) {
+                    showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif.');
+                    console.log('Payment success:', result);
+                },
+                onPending: function(result) {
+                    showSuccess('Pembayaran sedang diproses. Kami akan memberi tahu Anda setelah pembayaran dikonfirmasi.');
+                    console.log('Payment pending:', result);
+                },
+                onError: function(result) {
+                    showError('Pembayaran gagal. Silakan coba lagi.');
+                    console.log('Payment error:', result);
+                },
+                onClose: function() {
+                    console.log('Payment popup closed');
+                }
+            });
+        } catch (error) {
+            console.error('Error using window.snap.show:', error);
+            showError('Gagal menampilkan pembayaran. Silakan coba lagi nanti.');
+        }
+    } else {
+        console.log('Snap not immediately available, waiting for it to load...');
+        // Wait for Snap to load with a timeout
+        let attempts = 0;
+        const maxAttempts = 20; // 10 seconds total (20 * 500ms)
+        
+        const waitForSnap = setInterval(() => {
+            attempts++;
+            
+            if (window.snap && typeof window.snap.show === 'function') {
+                clearInterval(waitForSnap);
+                try {
+                    console.log('Snap loaded after waiting, using window.snap.show with token:', snap_token);
+                    snap.show({
+                        token: snap_token,
+                        onSuccess: function(result) {
+                            showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif.');
+                            console.log('Payment success:', result);
+                        },
+                        onPending: function(result) {
+                            showSuccess('Pembayaran sedang diproses. Kami akan memberi tahu Anda setelah pembayaran dikonfirmasi.');
+                            console.log('Payment pending:', result);
+                        },
+                        onError: function(result) {
+                            showError('Pembayaran gagal. Silakan coba lagi.');
+                            console.log('Payment error:', result);
+                        },
+                        onClose: function() {
+                            console.log('Payment popup closed');
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error using window.snap.show after waiting:', error);
+                    showError('Gagal menampilkan pembayaran. Silakan coba lagi nanti.');
+                }
+            } else if (attempts >= maxAttempts) {
+                clearInterval(waitForSnap);
+                console.log('Snap not loaded after timeout, showing error');
+                showError('Sistem pembayaran tidak dapat dimuat. Silakan refresh halaman dan coba lagi.');
+            } else {
+                console.log(`Waiting for Snap to load... Attempt ${attempts}/${maxAttempts}`);
+            }
+        }, 500); // Check every 500ms
+    }
+}
+
+// Fallback payment method
+function showPaymentFallback(snap_token) {
+    console.log('Using payment fallback with token:', snap_token);
+    
+    // Create a simple modal with payment instructions
+    const fallbackModal = document.createElement('div');
+    fallbackModal.className = 'modal active';
+    fallbackModal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="close-btn" id="closeFallbackModal">&times;</div>
+            <div class="fallback-payment">
+                <div class="fallback-content">
+                    <i class="fas fa-info-circle info-icon"></i>
+                    <h3>Instruksi Pembayaran</h3>
+                    <p>Silakan lanjutkan pembayaran melalui tautan berikut:</p>
+                    <div class="payment-actions">
+                        <button class="btn-primary" id="openPaymentLink">Buka Halaman Pembayaran</button>
+                        <button class="btn-secondary" id="copyPaymentLink">Salin Tautan</button>
+                    </div>
+                    <p class="small-text">Token pembayaran: ${snap_token.substring(0, 20)}...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(fallbackModal);
+    
+    // Add event listeners
+    document.getElementById('closeFallbackModal').addEventListener('click', () => {
+        document.body.removeChild(fallbackModal);
+    });
+    
+    document.getElementById('openPaymentLink').addEventListener('click', () => {
+        // In a real implementation, this would open the actual payment page
+        // For now, let's redirect to the Midtrans payment page directly
+        if (snap_token && snap_token.length > 10) {
+            // Try to get the redirect URL from the token
+            const redirectUrl = `https://app.sandbox.midtrans.com/snap/v4/redirection/${snap_token}`;
+            window.open(redirectUrl, '_blank');
+            document.body.removeChild(fallbackModal);
+        } else {
+            alert('Di lingkungan produksi, ini akan membuka halaman pembayaran Midtrans.');
+            document.body.removeChild(fallbackModal);
+        }
+    });
+    
+    document.getElementById('copyPaymentLink').addEventListener('click', () => {
+        if (snap_token && snap_token.length > 10) {
+            const redirectUrl = `https://app.sandbox.midtrans.com/snap/v4/redirection/${snap_token}`;
+            navigator.clipboard.writeText(redirectUrl).then(() => {
+                alert('Tautan pembayaran telah disalin ke clipboard.');
+            }).catch(() => {
+                // Fallback if clipboard fails
+                prompt('Salin tautan pembayaran berikut:', redirectUrl);
+            });
+        } else {
+            navigator.clipboard.writeText(snap_token).then(() => {
+                alert('Token pembayaran telah disalin ke clipboard.');
+            });
+        }
+    });
+    
+    fallbackModal.addEventListener('click', (e) => {
+        if (e.target === fallbackModal) {
+            document.body.removeChild(fallbackModal);
+        }
+    });
+}
+
+// Show payment popup with fallback
+
+
+
+
+
 
 // Close modal when clicking outside
 checkoutModal.addEventListener('click', (e) => {
@@ -1079,74 +1385,22 @@ checkoutForm.addEventListener('submit', async (e) => {
                             document.body.style.overflow = 'auto';
                             checkoutForm.reset();
                             
-                            // Check if we're in fallback mode (development)
-                            if (window.MIDTRANS_FALLBACK) {
-                                // Show success message for development/testing
-                                showSuccess('Data order telah dibuat! (Development Mode - Pembayaran dianggap berhasil untuk testing)', () => {
-                                    // Close checkout modal
-                                    checkoutModal.classList.remove('active');
-                                    document.body.style.overflow = 'auto';
-                                    checkoutForm.reset();
-                                    
-                                    // Simulate successful payment after a delay
-                                    setTimeout(() => {
-                                        showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif. (Simulasi Development)');
-                                    }, 1500);
-                                });
-                            } else if (window.snap) {
-                                // Show Midtrans payment popup
-                                window.snap.show({
-                                    token: snap_token,
-                                    onSuccess: function(result) {
-                                        showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif.');
-                                        console.log('Payment success:', result);
-                                    },
-                                    onPending: function(result) {
-                                        showSuccess('Pembayaran sedang diproses. Kami akan memberi tahu Anda setelah pembayaran dikonfirmasi.');
-                                        console.log('Payment pending:', result);
-                                    },
-                                    onError: function(result) {
-                                        showError('Pembayaran gagal. Silakan coba lagi.');
-                                        console.log('Payment error:', result);
-                                    }
-                                });
-                            } else {
-                                // Wait a bit to ensure Midtrans has loaded, then try again
-                                setTimeout(() => {
-                                    if (window.snap) {
-                                        window.snap.show({
-                                            token: snap_token,
-                                            onSuccess: function(result) {
-                                                showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif.');
-                                                console.log('Payment success:', result);
-                                            },
-                                            onPending: function(result) {
-                                                showSuccess('Pembayaran sedang diproses. Kami akan memberi tahu Anda setelah pembayaran dikonfirmasi.');
-                                                console.log('Payment pending:', result);
-                                            },
-                                            onError: function(result) {
-                                                showError('Pembayaran gagal. Silakan coba lagi.');
-                                                console.log('Payment error:', result);
-                                            }
-                                        });
-                                    } else if (window.MIDTRANS_FALLBACK) {
-                                        // Fallback for development mode
-                                        showSuccess('Data order telah dibuat! (Development Mode)', () => {
-                                            checkoutModal.classList.remove('active');
-                                            document.body.style.overflow = 'auto';
-                                            checkoutForm.reset();
-                                            
-                                            setTimeout(() => {
-                                                showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif. (Simulasi)');
-                                            }, 1500);
-                                        });
-                                    } else {
-                                        // If still not loaded, show a different message
-                                        showSuccess('Data order telah dibuat. Silakan refresh halaman dan coba lagi jika pembayaran tidak muncul.');
-                                        console.log('Midtrans not loaded after timeout:', data);
-                                    }
-                                }, 2000); // Wait 2 seconds for Midtrans to load
-                            }
+                            // Close checkout modal first
+                            checkoutModal.classList.remove('active');
+                            document.body.style.overflow = 'auto';
+                            checkoutForm.reset();
+                            
+                            // Show payment popup with fallback
+                            setTimeout(() => {
+                                // Validate token before showing popup
+                                if (snap_token && typeof snap_token === 'string' && snap_token.length > 10) {
+                                    console.log('Showing payment popup with validated token:', snap_token.substring(0, 20) + '...');
+                                    showPaymentPopup(snap_token);
+                                } else {
+                                    console.error('Invalid token for payment popup:', snap_token);
+                                    showError('Token pembayaran tidak valid. Silakan coba lagi.');
+                                }
+                            }, 500); // Small delay to ensure modal is closed
                         }, 1000); // Wait 1 second before showing payment popup
                     } else {
                         // Handle mock tokens (development/testing)

@@ -20,10 +20,12 @@ function getMidtransConfig($key) {
         case 'client_key':
             return $_ENV['MIDTRANS_CLIENT_KEY'] ?? '';
         case 'is_production':
-            return ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true';
+            // Force sandbox for development
+            return false; // ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true';
         case 'base_url':
-            return ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true' ? 
-                   'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
+            // Always use sandbox for development
+            return 'https://api.sandbox.midtrans.com'; // ($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true' ? 
+                   //'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
         default:
             return null;
     }
@@ -59,6 +61,12 @@ function createMidtransTransaction($orderData) {
                 'quantity' => 1,
                 'name' => $orderData['package_name']
             )
+        ),
+        // Ensure we get token, not redirect
+        'credit_card_3d_secure' => false,
+        // Explicitly request Snap token (this is the key difference)
+        'vtweb' => array(
+            'enabled' => true
         )
     );
     
@@ -68,6 +76,8 @@ function createMidtransTransaction($orderData) {
     $url = $baseUrl . "/snap/v1/transactions";
     
     error_log("Making request to: $url");
+    error_log("Request params: " . json_encode($params));
+    error_log("Server key (first 10 chars): " . substr($serverKey, 0, 10) . "...");
     
     curl_setopt_array($curl, array(
         CURLOPT_URL => $url,
@@ -105,12 +115,24 @@ function createMidtransTransaction($orderData) {
     
     $result = json_decode($response, true);
     
+    error_log("Midtrans full response for order " . $orderData['order_id'] . ": " . json_encode($result));
+    
+    // Midtrans Snap API should return both token and redirect_url
+    // The token is what we need for Snap popup, redirect_url is fallback
     if (isset($result['token'])) {
-        error_log("Midtrans transaction created successfully for order " . $orderData['order_id']);
+        error_log("Midtrans transaction created successfully for order " . $orderData['order_id'] . " with token: " . substr($result['token'], 0, 20) . "...");
+        // Return just the token for Snap popup
         return $result['token'];
     } elseif (isset($result['redirect_url'])) {
-        error_log("Midtrans transaction created with redirect URL for order " . $orderData['order_id']);
-        return $result; // Return full result for redirect
+        error_log("Midtrans returned redirect_url but no token. This should not happen with Snap API.");
+        error_log("Redirect URL: " . $result['redirect_url']);
+        error_log("Full response: " . json_encode($result));
+        // This is unexpected with Snap API, but if it happens, return null to trigger test mode
+        // Also log specific error details
+        if (isset($result['error_messages'])) {
+            error_log("Midtrans error messages: " . json_encode($result['error_messages']));
+        }
+        return null;
     }
     
     error_log("Midtrans response missing token: " . $response);
