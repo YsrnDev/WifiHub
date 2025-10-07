@@ -21,3 +21,39 @@
 [2025-10-07 20:07:52] Webhook: Successfully updated order 35 status to: paid
 [2025-10-07 20:07:52] Webhook: Voucher for order 35 activated
 [2025-10-07 20:07:52] Webhook: Payment successful for order 35. Voucher activated.
+
+[2025-10-07 20:24:41] Webhook received: {"transaction_type":"off-us","transaction_time":"2025-10-08 01:24:43","transaction_status":"pending","transaction_id":"be6bb47d-54d4-4116-b854-f61d084bc934","status_message":"midtrans payment notification","status_code":"201","signature_key":"2f47293d15702b97335429b5ea91b912986a8869dc4a6c276b31fcd30e1928b441651dd7f24320816508b5c912188b463e502110ea528135ddef4b59d5bab811","payment_type":"qris","order_id":"36","merchant_id":"G653424309","gross_amount":"50000.00","fraud_status":"accept","expiry_time":"2025-10-08 01:39:43","currency":"IDR"}
+[2025-10-07 20:24:41] Webhook: Processing order 36 with status pending
+[2025-10-07 20:24:41] Webhook: Original status for order 36 was: pending
+[2025-10-07 20:24:41] Webhook: Order 36 status unchanged (pending), no update needed
+
+[2025-10-07 20:24:51] Webhook received: {"transaction_type":"off-us","transaction_time":"2025-10-08 01:24:43","transaction_status":"settlement","transaction_id":"be6bb47d-54d4-4116-b854-f61d084bc934","status_message":"midtrans payment notification","status_code":"200","signature_key":"4ce6a192e813bba1a7de63b2bf66b714282bc2be03cedf71de473954b4891266b5293d42ee73656252bfb39c8c8c722ad1bcacbc56d2471f4bca7f54cdfbbe7f","settlement_time":"2025-10-08 01:24:52","payment_type":"qris","order_id":"36","merchant_id":"G653424309","issuer":"linkaja","gross_amount":"50000.00","fraud_status":"accept","expiry_time":"2025-10-08 01:39:43","currency":"IDR","acquirer":"gopay"}
+[2025-10-07 20:24:51] Webhook: Processing order 36 with status settlement
+[2025-10-07 20:24:51] Webhook: Original status for order 36 was: pending
+[2025-10-07 20:24:51] Webhook: Successfully updated order 36 status to: paid
+[2025-10-07 20:24:51] Webhook: Voucher for order 36 activated
+[2025-10-07 20:24:51] Webhook: Payment successful for order 36. Voucher activated.
+
+[2025-10-07 20:32:30] Webhook received: {"transaction_type":"off-us","transaction_time":"2025-10-08 01:32:31","transaction_status":"pending","transaction_id":"567c4bf6-0225-4ade-8ea2-3ad9986dae69","status_message":"midtrans payment notification","status_code":"201","signature_key":"a9eb3fac7883608a83a5592f15b72d8f4be58c107697157761b17a2c955ad41368b3ab055f9ebc0285e38ee43b1edf4b947caaf51b83921d1d7ce7b604463711","payment_type":"qris","order_id":"37","merchant_id":"G653424309","gross_amount":"5000.00","fraud_status":"accept","expiry_time":"2025-10-08 01:47:31","currency":"IDR"}
+[2025-10-07 20:32:30] Webhook: Processing order 37 with status pending
+[2025-10-07 20:32:30] Webhook: Original status for order 37 was: pending
+[2025-10-07 20:32:30] Webhook: Order 37 status unchanged (pending), no update needed
+
+[2025-10-07 20:33:09] Webhook received: {"transaction_type":"on-us","transaction_time":"2025-10-08 01:32:31","transaction_status":"settlement","transaction_id":"567c4bf6-0225-4ade-8ea2-3ad9986dae69","status_message":"midtrans payment notification","status_code":"200","signature_key":"9823e3cb9aaa9481933ac133e2c51881228d7f852082b58ae28e5eceb659713e2b5fc9561f974f5b0bfee247a1be59c1a2b399a746cc18bfa24fc83855074417","settlement_time":"2025-10-08 01:33:10","payment_type":"qris","order_id":"37","merchant_id":"G653424309","merchant_cross_reference_id":"4c5c0836-ab5b-4841-9ec4-60631c04788b","issuer":"gopay","gross_amount":"5000.00","fraud_status":"accept","expiry_time":"2025-10-08 01:47:31","currency":"IDR","acquirer":"gopay"}
+[2025-10-07 20:33:09] Webhook: Processing order 37 with status settlement
+[2025-10-07 20:33:09] Webhook: Original status for order 37 was: pending
+[2025-10-07 20:33:09] Webhook: Successfully updated order 37 status to: paid
+[2025-10-07 20:33:09] Webhook: Voucher for order 37 activated
+[2025-10-07 20:33:09] Webhook: Payment successful for order 37. Voucher activated.
+
+[2025-10-07 21:29:46] Webhook received: {"transaction_type":"off-us","transaction_time":"2025-10-08 02:29:47","transaction_status":"pending","transaction_id":"fcc7aede-5890-47b5-89ba-d639492b2497","status_message":"midtrans payment notification","status_code":"201","signature_key":"ac1671964acb5383c9dadf7b4f3d171d5cb088350d72c1fd622b8ade16024a9eb72ae042f58b4d2fd07bbe174c8550ab85738f87fab9f3e95f5610be47b9fe0f","payment_type":"qris","order_id":"38","merchant_id":"G653424309","gross_amount":"5000.00","fraud_status":"accept","expiry_time":"2025-10-08 02:44:47","currency":"IDR"}
+[2025-10-07 21:29:46] Webhook: Processing order 38 with status pending
+[2025-10-07 21:29:46] Webhook: Original status for order 38 was: pending
+[2025-10-07 21:29:46] Webhook: Order 38 status unchanged (pending), no update needed
+
+[2025-10-07 21:30:01] Webhook received: {"transaction_type":"off-us","transaction_time":"2025-10-08 02:29:47","transaction_status":"settlement","transaction_id":"fcc7aede-5890-47b5-89ba-d639492b2497","status_message":"midtrans payment notification","status_code":"200","signature_key":"9e4989e6f599e9ea9985f46ef43402e0d23a06b86444f9e169a8eb4445612ffb920ad5825a99238892adb749f349ea0a28844fded188a2b9e600ff7f36cfaaf4","settlement_time":"2025-10-08 02:30:03","payment_type":"qris","order_id":"38","merchant_id":"G653424309","issuer":"airpay shopee","gross_amount":"5000.00","fraud_status":"accept","expiry_time":"2025-10-08 02:44:47","currency":"IDR","acquirer":"gopay"}
+[2025-10-07 21:30:01] Webhook: Processing order 38 with status settlement
+[2025-10-07 21:30:01] Webhook: Original status for order 38 was: pending
+[2025-10-07 21:30:01] Webhook: Successfully updated order 38 status to: paid
+[2025-10-07 21:30:01] Webhook: Voucher for order 38 activated
+[2025-10-07 21:30:01] Webhook: Payment successful for order 38. Voucher activated.

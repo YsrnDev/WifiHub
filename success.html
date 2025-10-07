@@ -149,15 +149,15 @@
             </div>
         </div>
         
-        <a href="index.html" class="btn-primary">
+        <button onclick="goToHomepage()" class="btn-primary">
             <i class="fas fa-home"></i> Kembali ke Beranda
-        </a>
+        </button>
         
         <br><br>
         
-        <a href="index.html#pricing" class="btn-primary" style="background-color: #4F200D;">
+        <button onclick="goToVoucherPage()" class="btn-primary" style="background-color: #4F200D;">
             <i class="fas fa-ticket-alt"></i> Lihat Voucher Saya
-        </a>
+        </button>
     </div>
 
     <script>
@@ -194,6 +194,51 @@
             // Refresh untuk memastikan status pembayaran sudah diperbarui di sistem
             console.log('Refreshing voucher status...');
         }, 5000); // 5 detik delay sebelum memberi indikasi bahwa status mungkin sudah diperbarui
+        
+        // Fungsi untuk kembali ke halaman sebelumnya dan menutup tab ini
+        function goToHomepage() {
+            // Coba fokus ke window utama dulu
+            if (window.opener) {
+                // Pindah ke halaman utama
+                window.opener.location.href = 'index.html';
+                // Fokus ke window utama
+                window.opener.focus();
+            } else {
+                // Jika tidak bisa, pindah ke halaman utama di window ini
+                window.location.href = 'index.html';
+            }
+            // Tutup tab pembayaran
+            window.close();
+        }
+        
+        function goToVoucherPage() {
+            // Coba fokus ke window utama dulu
+            if (window.opener) {
+                // Pindah ke halaman voucher (bagian Lihat Voucher Saya di index.html)
+                window.opener.location.href = 'index.html#pricing';
+                // Fokus ke window utama
+                window.opener.focus();
+            } else {
+                // Jika tidak bisa, pindah ke halaman voucher di window ini
+                window.location.href = 'index.html#pricing';
+            }
+            // Tutup tab pembayaran
+            window.close();
+        }
+        
+        // Alternatif: jika window.close() tidak bekerja karena kebijakan browser,
+        // kita bisa tampilkan pesan untuk menutup tab secara manual
+        window.addEventListener('load', function() {
+            // Tambahkan event listener untuk tombol close browser
+            // Ini sebagai fallback jika window.close() tidak bekerja
+            const closeMessage = document.createElement('p');
+            closeMessage.textContent = 'Catatan: Anda dapat menutup tab ini sekarang.';
+            closeMessage.style.textAlign = 'center';
+            closeMessage.style.marginTop = '20px';
+            closeMessage.style.color = '#4F200D';
+            closeMessage.style.fontStyle = 'italic';
+            document.querySelector('.success-container').appendChild(closeMessage);
+        });
     </script>
 </body>
 </html>

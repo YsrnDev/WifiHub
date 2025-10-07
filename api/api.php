@@ -559,8 +559,6 @@ function getUserVouchers($data) {
             $shouldHide = (in_array($voucher['order_status'], ['failed', 'cancel', 'expire', 'cancelled']) && !$isNotExpired);
             
             if (!$shouldHide) {
-                // Add QR code URL to the voucher data
-                $voucher['qr_code_url'] = generateVoucherQRCode($voucher['voucher_code']);
                 $filteredVouchers[] = $voucher;
             }
         }
@@ -702,23 +700,5 @@ function generateAlphanumericCode($length = 8) {
     return $code;
 }
 
-// Function to generate QR code URL for voucher
-function generateVoucherQRCode($voucherCode) {
-    try {
-        if (empty($voucherCode)) {
-            error_log("Empty voucher code provided to generateVoucherQRCode");
-            return null;
-        }
-        
-        // Using Google Charts API to generate QR code
-        $qrData = urlencode($voucherCode);
-        $qrSize = "200x200"; // 200x200 pixels
-        $qrUrl = "https://chart.googleapis.com/chart?chs={$qrSize}&cht=qr&chl={$qrData}&choe=UTF-8";
-        
-        return $qrUrl;
-    } catch (Exception $e) {
-        error_log("Error generating QR code for voucher: " . $e->getMessage());
-        return null; // Return null if QR code generation fails
-    }
-}
+
 ?>

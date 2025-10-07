@@ -1,0 +1,9 @@
+                                    ${voucher.qr_code_url && voucher.order_status !== 'pending' ? 
+                                        `<div class=\"qr-code-container\" style=\"text-align: center; margin: 10px 0;\">
+                                            <p><strong>Pindai untuk Menggunakan Voucher:</strong></p>
+                                            <img src=\"${voucher.qr_code_url}\" alt=\"QR Code Voucher ${voucher.voucher_code}\" style=\"width: 150px; height: 150px; margin: 0 auto; display: block;\" onerror=\"this.onerror=null; this.style.display='none'; this.parentElement.querySelector('.qr-error').style.display='block';\">
+                                            <div class=\"qr-error\" style=\"display:none;\"><p><em>QR code tidak dapat dimuat</em></p></div>
+                                            <p style=\"font-size: 0.8em; margin-top: 5px;\">Kode Voucher: ${voucher.voucher_code}</p>
+                                        </div>` : 
+                                        ''
+                                    }

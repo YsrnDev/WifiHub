@@ -501,18 +501,16 @@ function showVoucherModal(vouchers) {
                                 <span class="voucher-status ${voucher.order_status}">${voucher.order_status}</span>
                             </div>
                             <div class="voucher-details">
-                                <p><strong>Kode Voucher:</strong> ${voucher.voucher_code || 'N/A'}</p>
-                                <p><strong>Username:</strong> ${voucher.username || 'N/A'}</p>
-                                <p><strong>Password:</strong> ${voucher.password || 'N/A'}</p>
-                                <p><strong>Harga:</strong> Rp ${voucher.price.toLocaleString()}</p>
-                                <p><strong>Kadaluarsa:</strong> ${voucher.expires_at || 'N/A'}</p>
-                                ${voucher.qr_code_url ? 
-                                    `<div class="qr-code-container" style="text-align: center; margin: 10px 0;">
-                                        <p><strong>Pindai untuk Menggunakan Voucher:</strong></p>
-                                        <img src="${voucher.qr_code_url}" alt="QR Code Voucher ${voucher.voucher_code}" style="width: 150px; height: 150px; margin: 0 auto; display: block;" onerror="this.onerror=null; this.parentElement.innerHTML='<p><em>QR code tidak dapat dimuat</em></p>';">
-                                        <p style="font-size: 0.8em; margin-top: 5px;">Kode Voucher: ${voucher.voucher_code}</p>
-                                    </div>` : 
-                                    '<p><em>QR code tidak tersedia</em></p>'
+                                ${(voucher.order_status === 'pending' || voucher.order_status === 'failed' || voucher.order_status === 'cancel' || voucher.order_status === 'expire' || voucher.order_status === 'cancelled') ?
+                                    `
+                                    <p><strong>Status:</strong> ${voucher.order_status}</p>
+                                    <p><em>Detail voucher akan muncul setelah pembayaran berhasil.</em></p>
+                                    ` :
+                                    `
+                                    <p><strong>Kode Voucher:</strong> <span id="voucherCode-${voucher.voucher_code || 'N/A'}">${voucher.voucher_code || 'N/A'}</span></p>
+                                    <p><strong>Harga:</strong> Rp ${voucher.price.toLocaleString()}</p>
+                                    <p><strong>Kadaluarsa:</strong> ${voucher.expires_at || 'N/A'}</p>
+                                    `
                                 }
                             </div>
                         </div>
@@ -971,6 +969,7 @@ function setupPaymentMethodHandler() {
         console.log('Payment method changed to:', this.value);
     });
 }
+
 
 
 
