@@ -506,6 +506,14 @@ function showVoucherModal(vouchers) {
                                 <p><strong>Password:</strong> ${voucher.password || 'N/A'}</p>
                                 <p><strong>Harga:</strong> Rp ${voucher.price.toLocaleString()}</p>
                                 <p><strong>Kadaluarsa:</strong> ${voucher.expires_at || 'N/A'}</p>
+                                ${voucher.qr_code_url ? 
+                                    `<div class="qr-code-container" style="text-align: center; margin: 10px 0;">
+                                        <p><strong>Pindai untuk Menggunakan Voucher:</strong></p>
+                                        <img src="${voucher.qr_code_url}" alt="QR Code Voucher ${voucher.voucher_code}" style="width: 150px; height: 150px; margin: 0 auto; display: block;" onerror="this.onerror=null; this.parentElement.innerHTML='<p><em>QR code tidak dapat dimuat</em></p>';">
+                                        <p style="font-size: 0.8em; margin-top: 5px;">Kode Voucher: ${voucher.voucher_code}</p>
+                                    </div>` : 
+                                    '<p><em>QR code tidak tersedia</em></p>'
+                                }
                             </div>
                         </div>
                     `).join('') + 
@@ -1150,9 +1158,9 @@ function showWarning(message) {
     });
 }
 
-// Function to show payment popup with fallback
+// Function to show payment in new tab with status tracking
 function showPaymentPopup(snap_token) {
-    console.log('Attempting to show payment popup with token:', snap_token);
+    console.log('Attempting to open payment in new tab with token:', snap_token);
     
     // Validate token first
     if (!snap_token || typeof snap_token !== 'string' || snap_token.length < 10) {
@@ -1168,76 +1176,99 @@ function showPaymentPopup(snap_token) {
         return;
     }
     
-    // First, try to use the existing snap.show method
-    if (window.snap && typeof window.snap.show === 'function') {
-        try {
-            console.log('Using window.snap.show with token:', snap_token);
-            snap.show({
-                token: snap_token,
-                onSuccess: function(result) {
-                    showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif.');
-                    console.log('Payment success:', result);
-                },
-                onPending: function(result) {
-                    showSuccess('Pembayaran sedang diproses. Kami akan memberi tahu Anda setelah pembayaran dikonfirmasi.');
-                    console.log('Payment pending:', result);
-                },
-                onError: function(result) {
-                    showError('Pembayaran gagal. Silakan coba lagi.');
-                    console.log('Payment error:', result);
-                },
-                onClose: function() {
-                    console.log('Payment popup closed');
-                }
-            });
-        } catch (error) {
-            console.error('Error using window.snap.show:', error);
-            showError('Gagal menampilkan pembayaran. Silakan coba lagi nanti.');
-        }
-    } else {
-        console.log('Snap not immediately available, waiting for it to load...');
-        // Wait for Snap to load with a timeout
-        let attempts = 0;
-        const maxAttempts = 20; // 10 seconds total (20 * 500ms)
-        
-        const waitForSnap = setInterval(() => {
-            attempts++;
-            
-            if (window.snap && typeof window.snap.show === 'function') {
-                clearInterval(waitForSnap);
-                try {
-                    console.log('Snap loaded after waiting, using window.snap.show with token:', snap_token);
-                    snap.show({
-                        token: snap_token,
-                        onSuccess: function(result) {
-                            showSuccess('Pembayaran berhasil! Voucher Anda akan segera aktif.');
-                            console.log('Payment success:', result);
-                        },
-                        onPending: function(result) {
-                            showSuccess('Pembayaran sedang diproses. Kami akan memberi tahu Anda setelah pembayaran dikonfirmasi.');
-                            console.log('Payment pending:', result);
-                        },
-                        onError: function(result) {
-                            showError('Pembayaran gagal. Silakan coba lagi.');
-                            console.log('Payment error:', result);
-                        },
-                        onClose: function() {
-                            console.log('Payment popup closed');
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error using window.snap.show after waiting:', error);
-                    showError('Gagal menampilkan pembayaran. Silakan coba lagi nanti.');
-                }
-            } else if (attempts >= maxAttempts) {
-                clearInterval(waitForSnap);
-                console.log('Snap not loaded after timeout, showing error');
-                showError('Sistem pembayaran tidak dapat dimuat. Silakan refresh halaman dan coba lagi.');
-            } else {
-                console.log(`Waiting for Snap to load... Attempt ${attempts}/${maxAttempts}`);
-            }
-        }, 500); // Check every 500ms
+    // Open payment in new tab using the Snap token
+    const paymentUrl = `https://app.sandbox.midtrans.com/snap/v4/redirection/${snap_token}`;
+    const paymentWindow = window.open(paymentUrl, '_blank');
+    
+    if (!paymentWindow) {
+        // If popup is blocked, show fallback
+        showPaymentFallback(snap_token);
+        return;
     }
+    
+    // Show message to user about checking the new tab
+    showSuccess('Pembayaran telah dibuka di tab baru. Silakan selesaikan pembayaran di sana.');
+    
+    // Start checking payment status in the background
+    startPaymentStatusCheck(snap_token);
+}
+
+// Function to check payment status periodically based on user's vouchers
+async function startPaymentStatusCheck(snap_token, maxChecks = 30) {
+    console.log('Starting payment status check for token:', snap_token.substring(0, 10) + '...');
+    
+    let checksDone = 0;
+    const checkStatus = async () => {
+        if (checksDone >= maxChecks) {
+            console.log('Payment status check ended after', maxChecks, 'attempts');
+            showSuccess('Silakan cek status pembayaran Anda di halaman "Voucher Saya" nanti.');
+            return;
+        }
+        
+        checksDone++;
+        
+        try {
+            // Check if user is still logged in
+            if (!currentUser || !currentUser.user_id) {
+                console.log('User not logged in, stopping payment status check');
+                return;
+            }
+            
+            // Check user vouchers which will include updated payment status
+            const response = await fetch('api/api.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'get_user_vouchers',
+                    user_id: currentUser.user_id
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success' && data.data && Array.isArray(data.data)) {
+                // Look for any voucher with updated status
+                let paymentStatusFound = false;
+                let paymentSuccess = false;
+                
+                for (const voucher of data.data) {
+                    // Check if any recent voucher has a status that indicates payment completion
+                    if (voucher.order_status === 'paid' || voucher.order_status === 'settlement' || voucher.order_status === 'capture') {
+                        paymentStatusFound = true;
+                        paymentSuccess = true;
+                        
+                        // Show success message
+                        showSuccess('Pembayaran berhasil! Voucher Anda telah aktif dan siap digunakan.');
+                        console.log('Payment successful detected for order');
+                        return; // Stop checking
+                    } else if (voucher.order_status === 'failed' || voucher.order_status === 'cancel' || voucher.order_status === 'expire') {
+                        paymentStatusFound = true;
+                        // Show failure message
+                        showError('Pembayaran gagal atau dibatalkan. Silakan coba pesan ulang jika diperlukan.');
+                        console.log('Payment failed/cancelled detected for order');
+                        return; // Stop checking
+                    }
+                }
+                
+                if (paymentStatusFound) {
+                    // Status was found but not final, continue checking
+                }
+            }
+            
+            // Continue checking after delay
+            setTimeout(checkStatus, 15000); // Check every 15 seconds
+            
+        } catch (error) {
+            console.error('Error checking payment status:', error);
+            // Continue checking even if there's an error
+            setTimeout(checkStatus, 15000);
+        }
+    };
+    
+    // Start the first check after a short delay
+    setTimeout(checkStatus, 10000);
 }
 
 // Fallback payment method
@@ -1391,14 +1422,27 @@ checkoutForm.addEventListener('submit', async (e) => {
                             checkoutForm.reset();
                             
                             // Show payment popup with fallback
-                            setTimeout(() => {
-                                // Validate token before showing popup
-                                if (snap_token && typeof snap_token === 'string' && snap_token.length > 10) {
-                                    console.log('Showing payment popup with validated token:', snap_token.substring(0, 20) + '...');
-                                    showPaymentPopup(snap_token);
-                                } else {
-                                    console.error('Invalid token for payment popup:', snap_token);
-                                    showError('Token pembayaran tidak valid. Silakan coba lagi.');
+                            setTimeout(async () => {
+                                // Ensure Midtrans is loaded before showing popup
+                                try {
+                                    // Load Midtrans if not already loaded
+                                    if (typeof window.snap === 'undefined' || !window.MIDTRANS_CLIENT_KEY) {
+                                        await loadMidtrans();
+                                        // Wait a bit for Midtrans to initialize
+                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                    }
+                                    
+                                    // Validate token before showing popup
+                                    if (snap_token && typeof snap_token === 'string' && snap_token.length > 10) {
+                                        console.log('Showing payment popup with validated token:', snap_token.substring(0, 20) + '...');
+                                        showPaymentPopup(snap_token);
+                                    } else {
+                                        console.error('Invalid token for payment popup:', snap_token);
+                                        showError('Token pembayaran tidak valid. Silakan coba lagi.');
+                                    }
+                                } catch (error) {
+                                    console.error('Error during Midtrans loading:', error);
+                                    showError('Gagal memuat sistem pembayaran. Silakan coba lagi.');
                                 }
                             }, 500); // Small delay to ensure modal is closed
                         }, 1000); // Wait 1 second before showing payment popup
@@ -1426,3 +1470,21 @@ checkoutForm.addEventListener('submit', async (e) => {
         }
     );
 });
+
+// Load Midtrans when the page is ready
+// This ensures the payment gateway is available when needed
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            await loadMidtrans();
+            console.log('Midtrans loaded on page ready');
+        } catch (error) {
+            console.error('Failed to load Midtrans on page ready:', error);
+        }
+    });
+} else {
+    // If DOM is already loaded, load Midtrans immediately
+    loadMidtrans().catch(error => {
+        console.error('Failed to load Midtrans:', error);
+    });
+}

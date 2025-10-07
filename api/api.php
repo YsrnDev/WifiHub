@@ -3,6 +3,12 @@
 // This file connects to your MySQL database and handles all API requests
 // Located in api/api.php
 
+// Handle preflight OPTIONS request for CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -83,7 +89,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
         }
     } else {
-        echo json_encode(['status' => 'error', 'message' => 'No action specified']);
+        // Check if this is a Midtrans webhook notification
+        $rawInput = file_get_contents('php://input');
+        $webhookData = json_decode($rawInput, true);
+        
+        // Handle potential webhook ping/test requests
+        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($webhookData && isset($webhookData['order_id']) && isset($webhookData['transaction_status'])) {
+                // This looks like a Midtrans webhook, handle it
+                handleMidtransWebhook();
+            } else {
+                // If it's a POST request but doesn't look like a proper webhook, return 400
+                http_response_code(400);
+                echo json_encode(['status' => 'error', 'message' => 'Invalid webhook data']);
+            }
+        } else {
+            // For any other case, return the original error
+            echo json_encode(['status' => 'error', 'message' => 'No action specified']);
+        }
     }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Only POST method allowed']);
@@ -297,10 +320,11 @@ function handleCheckout($data) {
         // Begin transaction
         $pdo->beginTransaction();
         
-        // Generate voucher code and user credentials
-        $voucherCode = "WH" . strtoupper(substr(md5(uniqid()), 0, 8));
-        $username = "user_" . time() . rand(1000, 9999);
-        $password = bin2hex(random_bytes(6)); // 12-character password
+        // Generate 8-character alphanumeric voucher code
+        $voucherCode = generateAlphanumericCode(8);
+        // Username and password are the same as the voucher code
+        $username = $voucherCode;
+        $password = $voucherCode;
         
         // Calculate expiration time based on package validity
         $createdAt = new DateTime();
@@ -513,12 +537,40 @@ function getUserVouchers($data) {
         $stmt->execute([':user_id' => $userId]);
         $vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        // Filter vouchers based on the requirements:
+        // Show pending and paid vouchers (not expired), hide failed/expired ones
+        $currentTime = new DateTime();
+        $filteredVouchers = [];
+        
+        foreach ($vouchers as $voucher) {
+            // Check if voucher is still valid (not expired if expiration date exists)
+            $isNotExpired = true;
+            if (!empty($voucher['expires_at'])) {
+                try {
+                    $expiresAt = new DateTime($voucher['expires_at']);
+                    $isNotExpired = ($expiresAt >= $currentTime);
+                } catch (Exception $e) {
+                    // If there's an error parsing the date, assume it's not expired
+                    $isNotExpired = true;
+                }
+            }
+            
+            // Only hide vouchers that are both expired AND have failed status
+            $shouldHide = (in_array($voucher['order_status'], ['failed', 'cancel', 'expire', 'cancelled']) && !$isNotExpired);
+            
+            if (!$shouldHide) {
+                // Add QR code URL to the voucher data
+                $voucher['qr_code_url'] = generateVoucherQRCode($voucher['voucher_code']);
+                $filteredVouchers[] = $voucher;
+            }
+        }
+        
         // Log for debugging
-        error_log("getUserVouchers: userId=$userId, result_count=" . count($vouchers));
+        error_log("getUserVouchers: userId=$userId, result_count=" . count($filteredVouchers));
         
         echo json_encode([
             'status' => 'success',
-            'data' => $vouchers
+            'data' => $filteredVouchers
         ]);
     } catch(PDOException $e) {
         error_log("Get user vouchers error: " . $e->getMessage());
@@ -634,6 +686,39 @@ function updateProfile($data) {
     } catch(PDOException $e) {
         error_log("Update profile error: " . $e->getMessage());
         echo json_encode(['status' => 'error', 'message' => 'Terjadi kesalahan saat memperbarui profile']);
+    }
+}
+
+// Function to generate alphanumeric code
+function generateAlphanumericCode($length = 8) {
+    $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $code = '';
+    $charLength = strlen($characters);
+    
+    for ($i = 0; $i < $length; $i++) {
+        $code .= $characters[rand(0, $charLength - 1)];
+    }
+    
+    return $code;
+}
+
+// Function to generate QR code URL for voucher
+function generateVoucherQRCode($voucherCode) {
+    try {
+        if (empty($voucherCode)) {
+            error_log("Empty voucher code provided to generateVoucherQRCode");
+            return null;
+        }
+        
+        // Using Google Charts API to generate QR code
+        $qrData = urlencode($voucherCode);
+        $qrSize = "200x200"; // 200x200 pixels
+        $qrUrl = "https://chart.googleapis.com/chart?chs={$qrSize}&cht=qr&chl={$qrData}&choe=UTF-8";
+        
+        return $qrUrl;
+    } catch (Exception $e) {
+        error_log("Error generating QR code for voucher: " . $e->getMessage());
+        return null; // Return null if QR code generation fails
     }
 }
 ?>
