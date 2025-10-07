@@ -23,7 +23,6 @@ error_log
 .idea/
 *.swp
 *.swo
-.qwen/
 
 # OS
 .DS_Store
